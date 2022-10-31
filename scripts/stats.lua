@@ -692,7 +692,7 @@ local function add_video(s)
     append_property(s, "avsync", {prefix="A-V:"})
     if append_property(s, compat("decoder-frame-drop-count"),
                        {prefix="丢帧数:", suffix=" (解码器)"}) then
-        append_property(s, compat("掉帧计数"), {suffix=" (输出)", nl="", indent=""})
+        append_property(s, compat("frame-drop-count"), {suffix=" (输出)", nl="", indent=""})
     end
     if append_property(s, "display-fps", {prefix="显示器FPS:", suffix=" (指定)"}) then
         append_property(s, "estimated-display-fps",
@@ -729,9 +729,9 @@ local function add_video(s)
     end
 
     -- Group these together to save vertical space
-    local prim = append(s, r["primaries"], {prefix="Primaries:"})
-    local cmat = append(s, r["colormatrix"], {prefix="Colormatrix:", nl=prim and "" or o.nl})
-    append(s, r["colorlevels"], {prefix="Levels:", nl=cmat and "" or o.nl})
+    local prim = append(s, r["primaries"], {prefix="原色:"})
+    local cmat = append(s, r["colormatrix"], {prefix="色彩矩阵:", nl=prim and "" or o.nl})
+    append(s, r["colorlevels"], {prefix="级别:", nl=cmat and "" or o.nl})
 
     -- Append HDR metadata conditionally (only when present and interesting)
     local hdrpeak = r["sig-peak"] or 0
@@ -874,7 +874,7 @@ local function cache_stats()
 
     eval_ass_formatting()
     add_header(stats)
-    append(stats, "", {prefix=o.nl .. o.nl .. "Cache info:", nl="", indent=""})
+    append(stats, "", {prefix=o.nl .. o.nl .. "缓存信息:", nl="", indent=""})
 
     local info = mp.get_property_native("demuxer-cache-state")
     if info == nil then
@@ -885,7 +885,7 @@ local function cache_stats()
     local a = info["reader-pts"]
     local b = info["cache-end"]
 
-    append(stats, opt_time(a) .. " - " .. opt_time(b), {prefix = "Packet queue:"})
+    append(stats, opt_time(a) .. " - " .. opt_time(b), {prefix = "数据包队列:"})
 
     local r = nil
     if (a ~= nil) and (b ~= nil) then
@@ -899,7 +899,7 @@ local function cache_stats()
                                  nil, 0.8, 1)
         r_graph = o.prefix_sep .. r_graph
     end
-    append(stats, opt_time(r), {prefix = "Read-ahead:", suffix = r_graph})
+    append(stats, opt_time(r), {prefix = "已读取:", suffix = r_graph})
 
     -- These states are not necessarily exclusive. They're about potentially
     -- separate mechanisms, whose states may be decoupled.
@@ -914,7 +914,7 @@ local function cache_stats()
     elseif info["idle"]  == true then
         state = "inactive"
     end
-    append(stats, state, {prefix = "State:"})
+    append(stats, state, {prefix = "状态:"})
 
     local speed = info["raw-input-rate"] or 0
     local speed_graph = nil
@@ -924,13 +924,13 @@ local function cache_stats()
                                      nil, 0.8, 1)
         speed_graph = o.prefix_sep .. speed_graph
     end
-    append(stats, utils.format_bytes_humanized(speed) .. "/s", {prefix="Speed:",
+    append(stats, utils.format_bytes_humanized(speed) .. "/s", {prefix="速度:",
         suffix=speed_graph})
 
     append(stats, utils.format_bytes_humanized(info["total-bytes"]),
-           {prefix = "Total RAM:"})
+           {prefix = "总占用内存:"})
     append(stats, utils.format_bytes_humanized(info["fw-bytes"]),
-           {prefix = "Forward RAM:"})
+           {prefix = "向前占用内存:"})
 
     local fc = info["file-cache-bytes"]
     if fc ~= nil then
@@ -938,23 +938,23 @@ local function cache_stats()
     else
         fc = "(disabled)"
     end
-    append(stats, fc, {prefix = "Disk cache:"})
+    append(stats, fc, {prefix = "磁盘缓存:"})
 
-    append(stats, info["debug-low-level-seeks"], {prefix = "Media seeks:"})
-    append(stats, info["debug-byte-level-seeks"], {prefix = "Stream seeks:"})
+    append(stats, info["debug-low-level-seeks"], {prefix = "媒体数量:"})
+    append(stats, info["debug-byte-level-seeks"], {prefix = "流数量:"})
 
-    append(stats, "", {prefix=o.nl .. o.nl .. "Ranges:", nl="", indent=""})
+    append(stats, "", {prefix=o.nl .. o.nl .. "缓存范围:", nl="", indent=""})
 
     append(stats, info["bof-cached"] and "yes" or "no",
-           {prefix = "Start cached:"})
+           {prefix = "开头缓存:"})
     append(stats, info["eof-cached"] and "yes" or "no",
-           {prefix = "End cached:"})
+           {prefix = "末尾缓存:"})
 
     local ranges = info["seekable-ranges"] or {}
     for n, r in ipairs(ranges) do
         append(stats, mp.format_time(r["start"]) .. " - " ..
                       mp.format_time(r["end"]),
-               {prefix = format("Range %s:", n)})
+               {prefix = format("范围 %s:", n)})
     end
 
     return table.concat(stats)
