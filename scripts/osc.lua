@@ -1102,12 +1102,12 @@ function window_controls(topbar)
     local lo
 
     -- Background Bar
-    new_element("wcbar", "box")
-    lo = add_layout("wcbar")
-    lo.geometry = wc_geo
-    lo.layer = 10
-    lo.style = osc_styles.wcBar
-    lo.alpha[1] = user_opts.boxalpha
+    --new_element("wcbar", "box")
+    --lo = add_layout("wcbar")
+    --lo.geometry = wc_geo
+    --lo.layer = 10
+    --lo.style = osc_styles.wcBar
+    --lo.alpha[1] = user_opts.boxalpha
 
     local button_y = wc_geo.y - (wc_geo.h / 2)
     local first_geo =
@@ -1177,23 +1177,23 @@ function window_controls(topbar)
     end
 
     -- Window Title
-    ne = new_element("wctitle", "")
-    ne.content = function ()
-        local title = mp.command_native({"expand-text", user_opts.title})
+    --ne = new_element("wctitle", "")
+    --ne.content = function ()
+        --local title = mp.command_native({"expand-text", user_opts.title})
         -- escape ASS, and strip newlines and trailing slashes
-        title = title:gsub("\\n", " "):gsub("\\$", ""):gsub("{","\\{")
-        return not (title == "") and title or "mpv"
-    end
-    local left_pad = 5
-    local right_pad = 10
-    lo = add_layout("wctitle")
-    lo.geometry =
-        { x = titlebox_left + left_pad ,y = wc_geo.y - 3, an = 1,
-          w = titlebox_w, h = wc_geo.h }
-    lo.style = string.format("%s{\\clip(%f,%f,%f,%f)}",
-        osc_styles.wcTitle,
-        titlebox_left + left_pad, wc_geo.y - wc_geo.h,
-        titlebox_right - right_pad , wc_geo.y + wc_geo.h)
+        --title = title:gsub("\\n", " "):gsub("\\$", ""):gsub("{","\\{")
+        --return not (title == "") and title or "mpv"
+    --end
+    --local left_pad = 5
+    --local right_pad = 10
+    --lo = add_layout("wctitle")
+    --lo.geometry =
+        --{ x = titlebox_left + left_pad ,y = wc_geo.y - 3, an = 1,
+          --w = titlebox_w, h = wc_geo.h }
+    --lo.style = string.format("%s{\\clip(%f,%f,%f,%f)}",
+        --osc_styles.wcTitle,
+        --titlebox_left + left_pad, wc_geo.y - wc_geo.h,
+        --titlebox_right - right_pad , wc_geo.y + wc_geo.h)
 
     add_area("window-controls-title",
              titlebox_left, 0, titlebox_right, wc_geo.h)
