@@ -5,7 +5,7 @@ local utils = require("mp.utils")
 local mpopts = require("mp.options")
 local options = {
 	-- Defaults to shift+w
-	keybind = "W",
+	keybind = "F1",
 	-- If empty, saves on the same directory of the playing video.
 	-- A starting "~" will be replaced by the home dir.
 	-- This field is delimited by double-square-brackets - [[ and ]] - instead of
@@ -48,13 +48,9 @@ local options = {
 	strict_audio_bitrate = 64,
 	-- Sets the output format, from a few predefined ones.
 	-- Currently we have:
-	-- webm-vp8 (libvpx/libvorbis)
-	-- webm-vp9 (libvpx-vp9/libopus)
 	-- mp4 (h264/AAC)
-	-- mp4-nvenc (h264-NVENC/AAC)
-	-- raw (rawvideo/pcm_s16le).
 	-- mp3 (libmp3lame)
-	-- and gif
+	-- gif
 	output_format = "gif",
 	twopass = true,
 	-- If set, applies the video filters currently used on the playback to the encode.
@@ -849,193 +845,6 @@ do
   _base_0.__class = _class_0
   Format = _class_0
 end
-local RawVideo
-do
-  local _class_0
-  local _parent_0 = Format
-  local _base_0 = {
-    getColorspace = function(self)
-      local csp = mp.get_property("colormatrix")
-      local _exp_0 = csp
-      if "bt.601" == _exp_0 then
-        return "bt601"
-      elseif "bt.709" == _exp_0 then
-        return "bt709"
-      elseif "bt.2020" == _exp_0 then
-        return "bt2020"
-      elseif "smpte-240m" == _exp_0 then
-        return "smpte240m"
-      else
-        msg.info("Warning, unknown colorspace " .. tostring(csp) .. " detected, using bt.601.")
-        return "bt601"
-      end
-    end,
-    getPostFilters = function(self)
-      return {
-        "format=yuv444p16",
-        "lavfi-scale=in_color_matrix=" .. self:getColorspace(),
-        "format=bgr24"
-      }
-    end
-  }
-  _base_0.__index = _base_0
-  setmetatable(_base_0, _parent_0.__base)
-  _class_0 = setmetatable({
-    __init = function(self)
-      self.displayName = "Raw"
-      self.supportsTwopass = false
-      self.videoCodec = "rawvideo"
-      self.audioCodec = "pcm_s16le"
-      self.outputExtension = "avi"
-      self.acceptsBitrate = false
-    end,
-    __base = _base_0,
-    __name = "RawVideo",
-    __parent = _parent_0
-  }, {
-    __index = function(cls, name)
-      local val = rawget(_base_0, name)
-      if val == nil then
-        local parent = rawget(cls, "__parent")
-        if parent then
-          return parent[name]
-        end
-      else
-        return val
-      end
-    end,
-    __call = function(cls, ...)
-      local _self_0 = setmetatable({}, _base_0)
-      cls.__init(_self_0, ...)
-      return _self_0
-    end
-  })
-  _base_0.__class = _class_0
-  if _parent_0.__inherited then
-    _parent_0.__inherited(_parent_0, _class_0)
-  end
-  RawVideo = _class_0
-end
-formats["raw"] = RawVideo()
-local WebmVP8
-do
-  local _class_0
-  local _parent_0 = Format
-  local _base_0 = {
-    getPreFilters = function(self)
-      local colormatrixFilter = {
-        ["bt.709"] = "bt709",
-        ["bt.2020"] = "bt2020",
-        ["smpte-240m"] = "smpte240m"
-      }
-      local ret = { }
-      local colormatrix = mp.get_property_native("video-params/colormatrix")
-      if colormatrixFilter[colormatrix] then
-        append(ret, {
-          "lavfi-colormatrix=" .. tostring(colormatrixFilter[colormatrix]) .. ":bt601"
-        })
-      end
-      return ret
-    end,
-    getFlags = function(self)
-      return {
-        "--ovcopts-add=threads=" .. tostring(options.libvpx_threads),
-        "--ovcopts-add=auto-alt-ref=1",
-        "--ovcopts-add=lag-in-frames=25",
-        "--ovcopts-add=quality=good",
-        "--ovcopts-add=cpu-used=0"
-      }
-    end
-  }
-  _base_0.__index = _base_0
-  setmetatable(_base_0, _parent_0.__base)
-  _class_0 = setmetatable({
-    __init = function(self)
-      self.displayName = "WebM"
-      self.supportsTwopass = true
-      self.videoCodec = "libvpx"
-      self.audioCodec = "libvorbis"
-      self.outputExtension = "webm"
-      self.acceptsBitrate = true
-    end,
-    __base = _base_0,
-    __name = "WebmVP8",
-    __parent = _parent_0
-  }, {
-    __index = function(cls, name)
-      local val = rawget(_base_0, name)
-      if val == nil then
-        local parent = rawget(cls, "__parent")
-        if parent then
-          return parent[name]
-        end
-      else
-        return val
-      end
-    end,
-    __call = function(cls, ...)
-      local _self_0 = setmetatable({}, _base_0)
-      cls.__init(_self_0, ...)
-      return _self_0
-    end
-  })
-  _base_0.__class = _class_0
-  if _parent_0.__inherited then
-    _parent_0.__inherited(_parent_0, _class_0)
-  end
-  WebmVP8 = _class_0
-end
-formats["webm-vp8"] = WebmVP8()
-local WebmVP9
-do
-  local _class_0
-  local _parent_0 = Format
-  local _base_0 = {
-    getFlags = function(self)
-      return {
-        "--ovcopts-add=threads=" .. tostring(options.libvpx_threads)
-      }
-    end
-  }
-  _base_0.__index = _base_0
-  setmetatable(_base_0, _parent_0.__base)
-  _class_0 = setmetatable({
-    __init = function(self)
-      self.displayName = "WebM (VP9)"
-      self.supportsTwopass = false
-      self.videoCodec = "libvpx-vp9"
-      self.audioCodec = "libopus"
-      self.outputExtension = "webm"
-      self.acceptsBitrate = true
-    end,
-    __base = _base_0,
-    __name = "WebmVP9",
-    __parent = _parent_0
-  }, {
-    __index = function(cls, name)
-      local val = rawget(_base_0, name)
-      if val == nil then
-        local parent = rawget(cls, "__parent")
-        if parent then
-          return parent[name]
-        end
-      else
-        return val
-      end
-    end,
-    __call = function(cls, ...)
-      local _self_0 = setmetatable({}, _base_0)
-      cls.__init(_self_0, ...)
-      return _self_0
-    end
-  })
-  _base_0.__class = _class_0
-  if _parent_0.__inherited then
-    _parent_0.__inherited(_parent_0, _class_0)
-  end
-  WebmVP9 = _class_0
-end
-formats["webm-vp9"] = WebmVP9()
 local MP4
 do
   local _class_0
@@ -1080,50 +889,6 @@ do
   MP4 = _class_0
 end
 formats["mp4"] = MP4()
-local MP4NVENC
-do
-  local _class_0
-  local _parent_0 = Format
-  local _base_0 = { }
-  _base_0.__index = _base_0
-  setmetatable(_base_0, _parent_0.__base)
-  _class_0 = setmetatable({
-    __init = function(self)
-      self.displayName = "MP4 (h264-NVENC/AAC)"
-      self.supportsTwopass = true
-      self.videoCodec = "h264_nvenc"
-      self.audioCodec = "aac"
-      self.outputExtension = "mp4"
-      self.acceptsBitrate = true
-    end,
-    __base = _base_0,
-    __name = "MP4NVENC",
-    __parent = _parent_0
-  }, {
-    __index = function(cls, name)
-      local val = rawget(_base_0, name)
-      if val == nil then
-        local parent = rawget(cls, "__parent")
-        if parent then
-          return parent[name]
-        end
-      else
-        return val
-      end
-    end,
-    __call = function(cls, ...)
-      local _self_0 = setmetatable({}, _base_0)
-      cls.__init(_self_0, ...)
-      return _self_0
-    end
-  })
-  _base_0.__class = _class_0
-  if _parent_0.__inherited then
-    _parent_0.__inherited(_parent_0, _class_0)
-  end
-  MP4NVENC = _class_0
-end
-formats["mp4-nvenc"] = MP4NVENC()
 local MP3
 do
   local _class_0
@@ -1758,7 +1523,7 @@ encode = function(region, startTime, endTime)
   local path, is_stream, is_temporary
   path, is_stream, is_temporary, startTime, endTime = find_path(startTime, endTime)
   if not path then
-    message("No file is being played")
+    message("无正在播放的文件")
     return 
   end
   local command = {
@@ -1888,14 +1653,14 @@ encode = function(region, startTime, endTime)
     append(first_pass_cmdline, {
       "--ovcopts-add=flags=+pass1"
     })
-    message("Starting first pass...")
+    message("开始第一次编码...")
     msg.verbose("First-pass command line: ", table.concat(first_pass_cmdline, " "))
     local res = run_subprocess({
       args = first_pass_cmdline,
       cancellable = false
     })
     if not res then
-      message("First pass failed! Check the logs for details.")
+      message("第一次编码失败！检查日志获取细节.")
       emit_event("encode-finished", "fail")
       return 
     end
@@ -1911,14 +1676,14 @@ encode = function(region, startTime, endTime)
   msg.info("Encoding to", out_path)
   msg.verbose("Command line:", table.concat(command, " "))
   if options.run_detached then
-    message("Started encode, process was detached.")
+    message("开始编码, 进程已分离.")
     return utils.subprocess_detached({
       args = command
     })
   else
     local res = false
     if not should_display_progress() then
-      message("Started encode...")
+      message("开始编码...")
       res = run_subprocess({
         args = command,
         cancellable = false
@@ -1928,10 +1693,10 @@ encode = function(region, startTime, endTime)
       res = ewp:startEncode(command)
     end
     if res then
-      message("Encoded successfully! Saved to\\N" .. tostring(bold(out_path)))
+      message("编码成功！保存在\\N" .. tostring(bold(out_path)))
       emit_event("encode-finished", "success")
     else
-      message("Encode failed! Check the logs for details.")
+      message("编码失败！检查日志获取细节.")
       emit_event("encode-finished", "fail")
     end
     os.remove(get_pass_logfile_path(out_path))
@@ -2417,12 +2182,8 @@ do
           }
         }
       }
-      local formatIds = {
-        "webm-vp8",
-        "webm-vp9",
+      local formatIds = {     
         "mp4",
-        "mp4-nvenc",
-        "raw",
         "mp3",
         "gif"
       }
@@ -2634,7 +2395,7 @@ do
       local ass = assdraw.ass_new()
       ass:new_event()
       self:setup_text(ass)
-      ass:append("Press " .. tostring(bold('ESC')) .. " to exit preview.\\N")
+      ass:append("按 " .. tostring(bold('ESC')) .. "退出预览.\\N")
       return mp.set_osd_ass(window_w, window_h, ass.text)
     end,
     cancel = function(self)
@@ -2792,15 +2553,15 @@ do
     encode = function(self)
       self:hide()
       if self.startTime < 0 then
-        message("No start time, aborting")
+        message("无开始时间，终止运行")
         return 
       end
       if self.endTime < 0 then
-        message("No end time, aborting")
+        message("无结束时间，终止运行")
         return 
       end
       if self.startTime >= self.endTime then
-        message("Start time is ahead of end time, aborting")
+        message("开始时间在结束时间之后，终止运行")
         return 
       end
       return encode(self.region, self.startTime, self.endTime)
