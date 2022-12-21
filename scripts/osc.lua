@@ -1,6 +1,5 @@
--- by maoiscat
--- email:valarmor@163.com
--- https://github.com/maoiscat/mpv-osc-morden
+-- Forked from maoiscat's modern.lua by Finn
+-- https://github.com/FinnRaze/mpv-osc-modern-f
 
 local assdraw = require 'mp.assdraw'
 local msg = require 'mp.msg'
@@ -1018,6 +1017,22 @@ function window_controls()
     lo.geometry = second_geo
     lo.style = osc_styles.WinCtrl
     lo.alpha[3] = 0
+    
+    local button_geo={
+        x = controlbox_left+69,
+        y = button_y,
+        an = 5,
+        w = 142,
+        h = wc_geo.h,
+    }
+    
+    -- Background Bar
+    new_element("wcbar", "box")
+    lo = add_layout("wcbar")
+    lo.geometry = button_geo
+    lo.layer = 10
+    lo.style = osc_styles.wcBar
+    lo.alpha[1] = user_opts.boxalpha
 end
 
 --
@@ -1243,7 +1258,7 @@ function osc_init()
             mp.commandv('playlist-prev', 'weak')
         end
     ne.eventresponder['mbtn_right_up'] =
-        function () show_message(get_playlist()) end
+        function () mp.commandv('script-binding', 'playlistmanager/showplaylist') end
 
     --next
     ne = new_element('pl_next', 'button')
@@ -1255,7 +1270,7 @@ function osc_init()
             mp.commandv('playlist-next', 'weak')
         end
     ne.eventresponder['mbtn_right_up'] =
-        function () show_message(get_playlist()) end
+        function () mp.commandv('script-binding', 'playlistmanager/showplaylist') end
 
 
     --play control buttons
@@ -1395,7 +1410,7 @@ function osc_init()
     ne.eventresponder['mbtn_left_up'] =
         function () mp.commandv('script-binding', 'stats/display-stats-toggle') end
     ne.eventresponder['mbtn_right_up'] =
-        function () mp.commandv('cycle', 'ontop') end
+        function () mp.commandv('script-binding', 'stats/display-page-4') end
     -- title
     ne = new_element('title', 'button')
     ne.content = function ()
