@@ -35,11 +35,12 @@ local user_opts = {
                                 -- to be shown as OSC title
     showtitle = true,            -- show title and no hide timeout on pause
     timetotal = false,              -- display total time instead of remaining time?
+    timems = false,             -- display timecodes with milliseconds
     visibility = 'auto',        -- only used at init to set visibility_mode(...)
     windowcontrols = 'auto',    -- whether to show window controls
     volumecontrol = true,       -- whether to show mute button and volumne slider
     processvolume = false,		-- volue slider show processd volume
-    language = 'chs',            -- eng=English, chs=Chinese
+    language = 'eng',            -- eng=English, chs=Chinese
     boxalpha = 180
 }
 
@@ -102,6 +103,7 @@ local osc_styles = {
     Title = '{\\blur1\\bord0.5\\1c&HFFFFFF&\\3c&H0\\fs36\\q2\\fn' .. user_opts.font .. '}',
     WinCtrl = '{\\blur1\\bord0.5\\1c&HFFFFFF&\\3c&H0\\fs20\\fnmpv-osd-symbols}',
     elementDown = '{\\1c&H999999&}',
+    wcBar = "{\\1c&H000000}",
 }
 
 -- internal states, do not touch
@@ -115,6 +117,7 @@ local state = {
     active_element = nil,                   -- nil = none, 0 = background, 1+ = see elements[]
     active_event_source = nil,              -- the 'button' that issued the current event
     rightTC_trem = not user_opts.timetotal, -- if the right timecode should display total or remaining time
+    tc_ms = user_opts.timems,               -- should the timecodes display their time with milliseconds
     mp_screen_sizeX, mp_screen_sizeY,       -- last screen-resolution, to detect resolution changes to issue reINITs
     initREQ = false,                        -- is a re-init request pending?
     last_mouseX, last_mouseY,               -- last mouse position, to detect significant mouse movement
@@ -865,7 +868,7 @@ function render_message(ass)
 
         local fontsize = tonumber(mp.get_property('options/osd-font-size'))
         local outline = tonumber(mp.get_property('options/osd-border-size'))
-        local maxlines = math.ceil(osc_param.unscaled_y*0.75 / fontsize)
+        local maxlines = math.ceil(osc_param.unscaled_y*1 / fontsize)
         local counterscale = osc_param.playresy / osc_param.unscaled_y
 
         fontsize = fontsize * counterscale / math.max(0.65 + math.min(lines/maxlines, 1), 1)
@@ -949,6 +952,7 @@ function window_controls()
         w = osc_param.playresx,
         h = 32,
     }
+    
 
     local controlbox_w = window_control_box_width
     local titlebox_w = wc_geo.w - controlbox_w
@@ -963,7 +967,7 @@ function window_controls()
                                controlbox_w, wc_geo.h))
 
     local lo
-
+        
     local button_y = wc_geo.y - (wc_geo.h / 2)
     local first_geo =
         {x = controlbox_left + 27, y = button_y, an = 5, w = 40, h = wc_geo.h}
@@ -1380,11 +1384,15 @@ function osc_init()
     ne = new_element('vol_ctrl', 'button')
     ne.enabled = (get_track('audio')>0)
     ne.visible = (osc_param.playresx >= 650) and user_opts.volumecontrol
-    ne.content = function ()
-        if (state.mute) then
-            return ('\xEF\x8E\xBB')
+    ne.content = function()
+        local volume = mp.get_property_number("volume", 0)
+        local mute = mp.get_property_native("mute")
+        local volicon = {'\xEF\x8E\xBA',
+                         '\xEF\x8E\xB9', '\xEF\x8E\xBC'}
+        if volume == 0 or mute then
+            return '\xEF\x8E\xBB'
         else
-            return ('\xEF\x8E\xBC')
+            return volicon[math.min(3,math.ceil(volume / (100/3)))]
         end
     end
     ne.eventresponder['mbtn_left_up'] =
@@ -1593,16 +1601,34 @@ function osc_init()
 		end
     -- tc_left (current pos)
     ne = new_element('tc_left', 'button')
-    ne.content = function () return (mp.get_property_osd('playback-time')) end
+    ne.content = function ()
+        if (state.tc_ms) then
+            return (mp.get_property_osd('playback-time/full'))
+        else
+            return (mp.get_property_osd('playback-time'))
+        end
+    end
+    ne.eventresponder['mbtn_left_up'] = function ()
+        state.tc_ms = not state.tc_ms
+        request_init()
+    end
 
     -- tc_right (total/remaining time)
     ne = new_element('tc_right', 'button')
     ne.content = function ()
         if (mp.get_property_number('duration', 0) <= 0) then return '--:--:--' end
         if (state.rightTC_trem) then
-            return ('-'..mp.get_property_osd('playtime-remaining'))
+            if (state.tc_ms) then
+                return ('-'..mp.get_property_osd('playtime-remaining/full'))
+            else
+                return ('-'..mp.get_property_osd('playtime-remaining'))
+            end
         else
-            return (mp.get_property_osd('duration'))
+            if (state.tc_ms) then
+                return (mp.get_property_osd('duration/full'))
+            else
+                return (mp.get_property_osd('duration'))
+            end
         end
     end
     ne.eventresponder['mbtn_left_up'] =
