@@ -28,7 +28,7 @@ local user_opts = {
     iamaprogrammer = false,     -- use native mpv values and disable OSC
                                 -- internal track list management (and some
                                 -- functions that depend on it)
-    layout = "reduced",	--original/reduced
+    layout = "reduced",	--original/reduced/mid
     font = 'mpv-osd-symbols',    -- default osc font
     seekrange = true,            -- show seekrange overlay
     seekrangealpha = 128,          -- transparency of seekranges
@@ -43,7 +43,8 @@ local user_opts = {
     volumecontrol = true,       -- whether to show mute button and volumne slider
     processvolume = false,		-- volue slider show processd volume
     language = 'eng',            -- eng=English, chs=Chinese
-    boxalpha = 180
+    boxalpha = 180,
+    deadzone = 200              -- area of mouse movement for osc showhide,pixel from bottom to top
 }
 
 -- Localization
@@ -159,7 +160,7 @@ local tick_delay = 0.03
 -- Helperfunctions
 --
 
-function set_osd(res_x, res_y, text)
+function set_osd(res_x, res_y, text,z)
     if state.osd.res_x == res_x and
        state.osd.res_y == res_y and
        state.osd.data == text then
@@ -168,7 +169,7 @@ function set_osd(res_x, res_y, text)
     state.osd.res_x = res_x
     state.osd.res_y = res_y
     state.osd.data = text
-    state.osd.z = 1000
+    state.osd.z = z
     state.osd:update()
 end
 
@@ -651,7 +652,7 @@ function render_elements(master_ass)
                             elseif (sliderpos > (s_max - 3)) then
                                 an = an + 1
                             end
-                        elseif (sliderpos > (s_max-s_min)/2) then
+                        elseif (sliderpos > (s_max+s_min)/2) then
                             an = an + 1
                             tx = tx - 5
                         else
@@ -1065,8 +1066,10 @@ layouts["reduced"] = function ()
     add_area('input', get_hitbox_coords(posX, posY, 1, osc_geo.w, 104))
 
     -- area for show/hide
-    add_area('showhide', 0, osc_param.playresy-200, osc_param.playresx, osc_param.playresy)
-    add_area('showhide_wc', osc_param.playresx*0.67, 0, osc_param.playresx, 48)
+    add_area('showhide', 0, osc_param.playresy-user_opts.deadzone, osc_param.playresx, osc_param.playresy)
+    if window_controls_enabled() then
+    add_area('showhide_wc', osc_param.playresx*0.5, 0, osc_param.playresx, 48)
+    end
     
     -- fetch values
     local osc_w, osc_h=
@@ -1205,8 +1208,10 @@ layouts["original"] = function ()
     add_area('input', get_hitbox_coords(posX, posY, 1, osc_geo.w, 104))
 
     -- area for show/hide
-    add_area('showhide', 0, osc_param.playresy-200, osc_param.playresx, osc_param.playresy)
-    add_area('showhide_wc', osc_param.playresx*0.67, 0, osc_param.playresx, 48)
+    add_area('showhide', 0, osc_param.playresy-user_opts.deadzone, osc_param.playresx, osc_param.playresy)
+    if window_controls_enabled() then
+    add_area('showhide_wc', osc_param.playresx*0.5, 0, osc_param.playresx, 48)
+    end
     
     -- fetch values
     local osc_w, osc_h=
@@ -1350,8 +1355,10 @@ layouts["mid"] = function ()
     add_area('input', get_hitbox_coords(posX, posY, 1, osc_geo.w, 104))
 
     -- area for show/hide
-    add_area('showhide', 0, osc_param.playresy-200, osc_param.playresx, osc_param.playresy)
-    add_area('showhide_wc', osc_param.playresx*0.67, 0, osc_param.playresx, 48)
+    add_area('showhide', 0, osc_param.playresy-user_opts.deadzone, osc_param.playresx, osc_param.playresy)
+    if window_controls_enabled() then
+    add_area('showhide_wc', osc_param.playresx*0.5, 0, osc_param.playresx, 48)
+    end
     
     -- fetch values
     local osc_w, osc_h=
@@ -1554,7 +1561,7 @@ function osc_init()
             mp.commandv('playlist-prev', 'weak')
         end
     ne.eventresponder['mbtn_right_up'] =
-        function () mp.commandv('script-binding', 'playlistmanager/showplaylist') end
+        function () mp.commandv('script-binding', 'recent/display-recent') end
 
     --next
     ne = new_element('pl_next', 'button')
@@ -1645,7 +1652,11 @@ function osc_init()
         function () set_track('audio', -1) end    
     ne.eventresponder['shift+mbtn_left_down'] =
         function () show_message(get_tracklist('audio')) end
-                
+    ne.eventresponder["wheel_down_press"] =
+        function () set_track("audio", 1) end
+    ne.eventresponder["wheel_up_press"] =
+        function () set_track("audio", -1) end
+                    
     --cy_sub
     ne = new_element('cy_sub', 'button')
     ne.enabled = (#tracks_osc.sub > 0)
@@ -1675,7 +1686,11 @@ function osc_init()
         function () set_track('sub', -1) end
     ne.eventresponder['shift+mbtn_left_down'] =
         function () show_message(get_tracklist('sub')) end
-        
+    ne.eventresponder["wheel_down_press"] =
+        function () set_track("sub", 1) end
+    ne.eventresponder["wheel_up_press"] =
+        function () set_track("sub", -1) end
+            
     -- vol_ctrl
     ne = new_element('vol_ctrl', 'button')
     ne.enabled = (get_track('audio')>0)
@@ -1857,7 +1872,11 @@ function osc_init()
         end
     ne.eventresponder['reset'] =
         function (element) element.state.lastseek = nil end
-
+    ne.eventresponder["wheel_up_press"] =
+        function () mp.commandv("osd-auto", "seek",  10) end
+    ne.eventresponder["wheel_down_press"] =
+        function () mp.commandv("osd-auto", "seek", -10) end
+        
     --volumebar
     ne = new_element('volumebar', 'slider')
     ne.visible = (osc_param.playresx >= 700) and user_opts.volumecontrol
@@ -2224,7 +2243,7 @@ function render()
 
     -- submit
     set_osd(osc_param.playresy * osc_param.display_aspect,
-            osc_param.playresy, ass.text)
+            osc_param.playresy, ass.text,1000)
 end
 
 --
@@ -2311,30 +2330,38 @@ function show_logo()
     osd_w, osd_h = 1024*osd_aspect, 1024
     local logo_x, logo_y = osd_w/2, osd_h/2-20
     local ass = assdraw.ass_new()
+    
     ass:new_event()
     ass:pos(logo_x, logo_y)
-    ass:append('{\\1c&H8E348D&\\3c&H0&\\3a&H60&\\blur1\\bord0.5}')
+    ass:append('{\\1c&HE5E5E5&\\3c&H0&\\3a&H60&\\blur1\\bord0.5}')
+    ass:draw_start()
+    ass_draw_cir_cw(ass, -2, 2, 108)
+    ass:draw_stop()
+    
+    ass:new_event()
+    ass:pos(logo_x, logo_y)
+    ass:append('{\\1c&H682167&\\3c&H0&\\3a&H60&\\blur1\\bord0.5}')
     ass:draw_start()
     ass_draw_cir_cw(ass, 0, 0, 100)
     ass:draw_stop()
     
     ass:new_event()
     ass:pos(logo_x, logo_y)
-    ass:append('{\\1c&H632462&\\bord0}')
+    ass:append('{\\1c&H430142&\\bord0}')
     ass:draw_start()
     ass_draw_cir_cw(ass, 6, -6, 75)
     ass:draw_stop()
 
     ass:new_event()
     ass:pos(logo_x, logo_y)
-    ass:append('{\\1c&HFFFFFF&\\bord0}')
+    ass:append('{\\1c&HDDDBDD&\\bord0}')
     ass:draw_start()
     ass_draw_cir_cw(ass, -4, 4, 50)
     ass:draw_stop()
         
     ass:new_event()
     ass:pos(logo_x, logo_y)
-    ass:append('{\\1c&H632462&\\bord&}')
+    ass:append('{\\1c&H691F69&\\bord&}')
     ass:draw_start()
     ass:move_to(-20, -20)
     ass:line_to(23.3, 5)
@@ -2345,7 +2372,7 @@ function show_logo()
     ass:pos(logo_x, logo_y+140)
     ass:an(8)
     ass:append(texts.welcome)
-    set_osd(osd_w, osd_h, ass.text)
+    set_osd(osd_w, osd_h, ass.text,-1000)
 end
 
 -- called by mpv on every frame
@@ -2436,8 +2463,12 @@ mp.observe_property('fullscreen', 'bool',
 mp.observe_property('mute', 'bool',
     function(name, val)
         state.mute = val
+        request_tick()
     end
 )
+
+mp.observe_property('ontop', nil, request_tick)
+
 mp.observe_property('volume', 'number',
 	function(name, val)
 		state.sys_volume = val
@@ -2446,6 +2477,7 @@ mp.observe_property('volume', 'number',
 		else
 			state.proc_volume = val
 		end
+		request_tick()
 	end
 )
 mp.observe_property('border', 'bool',
@@ -2525,8 +2557,6 @@ function always_on(val)
     if state.enabled then
         if val then
             show_osc()
-        else
-            hide_osc()
         end
     end
 end
@@ -2558,7 +2588,7 @@ function visibility_mode(mode, no_osd)
     end
     
     user_opts.visibility = mode
-    utils.shared_script_property_set("osc-visibility", mode)
+    mp.set_property_native("user-data/modernf/visibility", mode)
     
     if not no_osd and tonumber(mp.get_property('osd-level')) >= 1 then
         mp.osd_message('OSC visibility: ' .. mode)
@@ -2588,7 +2618,7 @@ function idlescreen_visibility(mode, no_osd)
         user_opts.idlescreen = false
     end
 
-    utils.shared_script_property_set("osc-idlescreen", mode)
+    mp.set_property_native("osc-idlescreen", mode)
 
     if not no_osd and tonumber(mp.get_property("osd-level")) >= 1 then
         mp.osd_message("OSC logo visibility: " .. tostring(mode))

@@ -124,7 +124,7 @@ local o = {
 }
 
 opt.read_options(o, 'file_browser')
-utils.shared_script_property_set("file_browser-open", "no")
+mp.set_property_native("file_browser-open", "no")
 
 package.path = mp.command_native({"expand-path", o.module_directory}).."/?.lua;"..package.path
 local success, input = pcall(require, "user-input-module")
@@ -1183,7 +1183,7 @@ local function open()
         mp.add_forced_key_binding(v[1], 'dynamic/'..v[2], v[3], v[4])
     end
 
-    utils.shared_script_property_set("file_browser-open", "yes")
+    mp.set_property_native("file_browser-open", "yes")
     if o.toggle_idlescreen then mp.commandv('script-message', 'osc-idlescreen', 'no', 'no_osd') end
     state.hidden = false
     if state.directory == nil then
@@ -1206,7 +1206,7 @@ local function close()
         mp.remove_key_binding('dynamic/'..v[2])
     end
 
-    utils.shared_script_property_set("file_browser-open", "no")
+    mp.set_property_native("file_browser-open", "no")
     if o.toggle_idlescreen then mp.commandv('script-message', 'osc-idlescreen', 'yes', 'no_osd') end
     state.hidden = true
     ass:remove()
